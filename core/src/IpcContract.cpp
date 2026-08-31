@@ -19,7 +19,7 @@ static cla_u32 ClaCreateRequestFixedSize(void)
     return (cla_u32)((cla_u8 *)&((ClaLampArrayCreateRequest *)0)->Lamps - (cla_u8 *)0);
 }
 
-static cla_u32 ClaUpdateMessageFixedSize(void)
+static cla_u32 ClaUpdateMessageFixedSizeInternal(void)
 {
     return (cla_u32)((cla_u8 *)&((ClaUpdateMessage *)0)->Colors - (cla_u8 *)0);
 }
@@ -41,13 +41,18 @@ cla_u32 ClaCreateRequestSizeForLampCount(cla_u32 lampCount)
     return (cla_u32)total;
 }
 
+cla_u32 ClaUpdateMessageFixedSize(void)
+{
+    return ClaUpdateMessageFixedSizeInternal();
+}
+
 cla_u32 ClaUpdateMessageSizeForLampCount(cla_u32 lampCount)
 {
     if (lampCount == 0 || lampCount > CLA_MAX_LAMPS_PER_ARRAY)
     {
         return 0;
     }
-    const cla_u64 total = (cla_u64)ClaUpdateMessageFixedSize() +
+    const cla_u64 total = (cla_u64)ClaUpdateMessageFixedSizeInternal() +
                           (cla_u64)lampCount * (cla_u64)sizeof(ClaLampColor);
     if (total > 0xFFFFFFFFull)
     {

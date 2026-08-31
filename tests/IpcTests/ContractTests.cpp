@@ -121,6 +121,15 @@ CLA_TEST(Layout_SizeHelpersAgreeWithStructures)
     /* Sizing a buffer with sizeof() must always be safe, i.e. never smaller
      * than the wire size, so a caller that does the obvious thing is fine. */
     CLA_CHECK(sizeof(ClaUpdateMessage) >= update1);
+
+    /* A message carrying no colours is offsetof(Colors) on the wire.  Using
+     * sizeof() there would over-report the bytes written by the trailing
+     * padding, which is what the driver reports back as the transfer size. */
+    CLA_CHECK_EQ(ClaUpdateMessageFixedSize(),
+                 static_cast<cla_u32>(offsetof(ClaUpdateMessage, Colors)));
+    CLA_CHECK(ClaUpdateMessageFixedSize() < sizeof(ClaUpdateMessage));
+    CLA_CHECK_EQ(update1, ClaUpdateMessageFixedSize() +
+                              static_cast<cla_u32>(sizeof(ClaLampColor)));
 }
 
 /* ---------------------------------------------------------------- */

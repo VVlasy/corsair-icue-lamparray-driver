@@ -242,6 +242,12 @@ cla_u32 ClaCreateRequestSizeForLampCount(cla_u32 lampCount);
  * if the count is out of range. */
 cla_u32 ClaUpdateMessageSizeForLampCount(cla_u32 lampCount);
 
+/* Wire size of an update message carrying NO colours -- the state-change
+ * kinds (autonomous mode, removal).  This is offsetof(Colors), which is
+ * SMALLER than sizeof(ClaUpdateMessage): the struct has trailing padding, so
+ * sizeof() would over-report how many bytes were actually written. */
+cla_u32 ClaUpdateMessageFixedSize(void);
+
 /*
  * Validate a CREATE_LAMP_ARRAY buffer received from user mode.
  *

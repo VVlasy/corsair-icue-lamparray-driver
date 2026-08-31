@@ -436,6 +436,25 @@ ClaTryDeliverPendingUpdate(
     }
 
     /*
+     * Check the buffer BEFORE consuming anything.
+     *
+     * The frame is taken out of the pending slot under the lock below, and
+     * that is destructive: once PendingFrameValid is cleared the frame is
+     * gone.  Discovering only afterwards that the caller's buffer is too small
+     * would lose it silently, which is the worst possible failure here because
+     * the lighting would simply stop with nothing logged.
+     *
+     * LampCount is fixed at creation and never changes, so the largest message
+     * this array can produce is known without holding the lock.
+     */
+    const ULONG maximumMessageSize = ClaUpdateMessageSizeForLampCount(LampArray->LampCount);
+    if (maximumMessageSize == 0 || outputLength < maximumMessageSize)
+    {
+        WdfRequestComplete(request, STATUS_BUFFER_TOO_SMALL);
+        return;
+    }
+
+    /*
      * Everything below happens under StateLock, including the colour copy.
      * The copy cannot be deferred until after the lock is dropped: a
      * concurrent SetFeature would overwrite PendingFrame mid-copy and the
@@ -472,12 +491,10 @@ ClaTryDeliverPendingUpdate(
         LampArray->FramesPublished++;
     }
 
-    const ULONG requiredLength = ClaUpdateMessageSizeForLampCount(lampCount);
-    const BOOLEAN bufferBigEnough =
-        haveFrame ? (requiredLength != 0 && outputLength >= requiredLength) : TRUE;
-
-    if (haveFrame && bufferBigEnough)
+    if (haveFrame)
     {
+        /* Guaranteed to fit: outputLength was checked against this array's
+         * maximum message size above, and lampCount is that same LampCount. */
         RtlCopyMemory(message->Colors, LampArray->PendingFrame,
                       (SIZE_T)lampCount * sizeof(ClaLampColor));
     }
@@ -496,20 +513,15 @@ ClaTryDeliverPendingUpdate(
         return;
     }
 
-    if (haveFrame && !bufferBigEnough)
-    {
-        WdfRequestComplete(request, STATUS_BUFFER_TOO_SMALL);
-        return;
-    }
-
+    /*
+     * For a colour frame this is the exact wire size.  For the state-change
+     * kinds no colours are written, so the fixed part is all there is --
+     * and that is offsetof(Colors), NOT sizeof(ClaUpdateMessage), which
+     * includes trailing padding and would over-report the byte count to the
+     * service.  Both are within outputLength, checked above.
+     */
     const ULONG messageSize =
-        haveFrame ? requiredLength : (ULONG)sizeof(ClaUpdateMessage);
-
-    if (outputLength < messageSize)
-    {
-        WdfRequestComplete(request, STATUS_BUFFER_TOO_SMALL);
-        return;
-    }
+        haveFrame ? maximumMessageSize : ClaUpdateMessageFixedSize();
 
     message->Header.Version = CLA_IPC_PROTOCOL_VERSION;
     message->Header.Size = messageSize;
