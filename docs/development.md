@@ -46,6 +46,27 @@ Validate the descriptor:
 ./build/tools/DescriptorDump/DescriptorDump --check  # exit code only
 ```
 
+Compile and link the **driver** sources without a WDK:
+
+```sh
+./build/tests/DriverSyntax/DriverSyntaxCheck
+```
+
+This builds the five driver translation units against stub WDK headers. It is
+a syntax and linkage check, not a substitute for a WDK build -- the stubs
+approximate the WDK's shape, not its behaviour, so they cannot tell you the
+driver is correct. What they do catch, on any machine in seconds, is the class
+of problem that otherwise sits undiscovered until someone with a WDK tries:
+typos, misspelled APIs, wrong argument counts, functions declared but never
+defined, and duplicate symbols across translation units.
+
+That last one is not hypothetical. This harness was written after the driver
+was complete, and immediately found two errors that would have failed the first
+real build: a `#include <initguid.h>` in a shared header made all five
+translation units emit their own definition of the device interface GUID, and a
+`goto` in `ClaLampArrayCreate` crossed variable initialisations, which MSVC
+rejects as C2362. See `tests/DriverSyntax/stubs/README.md`.
+
 Source hygiene (non-ASCII, tabs, trailing whitespace, SPDX headers):
 
 ```sh

@@ -118,6 +118,21 @@ ClaLampArrayCreate(
     PCLA_LAMP_ARRAY_CONTEXT lampArray = NULL;
     NTSTATUS status;
 
+    /*
+     * Everything this function uses is declared here, before the first goto.
+     * The cleanup paths below jump forward to Cleanup, and in C++ a goto may
+     * not cross the initialisation of a variable that is still in scope at the
+     * label -- MSVC rejects it as C2362.  Declaring up front is the usual
+     * shape for goto-based cleanup in driver code and keeps that legal.
+     */
+    WDF_OBJECT_ATTRIBUTES lockAttributes;
+    ClaLampArrayAttributes attributes;
+    VHF_CONFIG vhfConfig;
+    WCHAR instanceId[CLA_MAX_SERIAL_CHARS];
+    size_t instanceIdChars = 0;
+    ULONG slot = CLA_MAX_LAMP_ARRAYS;
+    ULONG lampCount = 0;
+
     PAGED_CODE();
 
     *LampArrayId = 0;
@@ -133,7 +148,7 @@ ClaLampArrayCreate(
         return STATUS_INVALID_PARAMETER;
     }
 
-    const ULONG lampCount = Request->LampCount;
+    lampCount = Request->LampCount;
 
     lampArray = (PCLA_LAMP_ARRAY_CONTEXT)ExAllocatePool2(
         POOL_FLAG_NON_PAGED, sizeof(CLA_LAMP_ARRAY_CONTEXT), CLA_POOL_TAG_CONTEXT);
@@ -165,7 +180,6 @@ ClaLampArrayCreate(
     RtlCopyMemory(lampArray->Lamps, Request->Lamps,
                   (SIZE_T)lampCount * sizeof(ClaLampInfo));
 
-    WDF_OBJECT_ATTRIBUTES lockAttributes;
     WDF_OBJECT_ATTRIBUTES_INIT(&lockAttributes);
     lockAttributes.ParentObject = Device;
     status = WdfSpinLockCreate(&lockAttributes, &lampArray->StateLock);
@@ -174,7 +188,6 @@ ClaLampArrayCreate(
         goto Cleanup;
     }
 
-    ClaLampArrayAttributes attributes;
     RtlZeroMemory(&attributes, sizeof(attributes));
     attributes.LampCount = (cla_u16)lampCount;
     attributes.BoundingBoxWidthInMicrometers = Request->BoundingBoxWidthInMicrometers;
@@ -194,7 +207,6 @@ ClaLampArrayCreate(
      * instant VhfStart returns can already find us. */
     WdfWaitLockAcquire(deviceContext->LampArrayLock, NULL);
 
-    ULONG slot = CLA_MAX_LAMP_ARRAYS;
     for (ULONG i = 0; i < CLA_MAX_LAMP_ARRAYS; ++i)
     {
         if (deviceContext->LampArrays[i] == NULL)
@@ -223,7 +235,6 @@ ClaLampArrayCreate(
      * carries no lamp count (that is runtime data in report 1) and every
      * LampId field is 16 bits, so one descriptor serves any device.
      */
-    VHF_CONFIG vhfConfig;
     VHF_CONFIG_INIT(&vhfConfig,
                     WdfDeviceWdmGetDeviceObject(Device),
                     CLA_LAMP_ARRAY_DESCRIPTOR_SIZE,
@@ -242,7 +253,6 @@ ClaLampArrayCreate(
     vhfConfig.EvtVhfCleanup = ClaEvtVhfCleanup;
 
     /* Serial identifies this LampArray among the others we host. */
-    WCHAR instanceId[CLA_MAX_SERIAL_CHARS];
     RtlZeroMemory(instanceId, sizeof(instanceId));
     for (ULONG i = 0; i < CLA_MAX_SERIAL_CHARS - 1; ++i)
     {
@@ -254,7 +264,6 @@ ClaLampArrayCreate(
     }
     instanceId[CLA_MAX_SERIAL_CHARS - 1] = L'\0';
 
-    size_t instanceIdChars = 0;
     status = RtlStringCchLengthW(instanceId, CLA_MAX_SERIAL_CHARS, &instanceIdChars);
     if (NT_SUCCESS(status) && instanceIdChars > 0)
     {

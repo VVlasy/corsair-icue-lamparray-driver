@@ -68,7 +68,7 @@ single `IOCTL_CLA_CREATE_LAMP_ARRAY`. The driver then answers every
 `LampArrayAttributesReport` and `LampAttributesResponseReport` from its own
 copy.
 
-This is allowed because HUT 1.4 §26.8.3 says lamp attributes are static and can
+This is allowed because HUT 1.4 s26.8.3 says lamp attributes are static and can
 never change. It buys three things:
 
 1. The HID path never blocks on a user-mode round trip.

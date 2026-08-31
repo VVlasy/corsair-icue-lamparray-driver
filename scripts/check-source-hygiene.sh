@@ -19,9 +19,13 @@ cd "$(dirname "$0")/.."
 status=0
 note() { printf '%s\n' "$*" >&2; }
 
-sources=$(git ls-files \
-    '*.h' '*.c' '*.cpp' '*.inf' '*.vcxproj' '*.txt' '*.md' '*.ps1' '*.sh' '*.yml' \
-    2>/dev/null || true)
+# Both tracked AND untracked-but-not-ignored files.  Checking only tracked
+# files means a brand new file is silently skipped until after it has been
+# committed -- which is exactly when the check is least useful.
+patterns=('*.h' '*.c' '*.cpp' '*.inf' '*.vcxproj' '*.txt' '*.md' '*.ps1' '*.sh' '*.yml')
+sources=$( { git ls-files "${patterns[@]}" 2>/dev/null;
+             git ls-files --others --exclude-standard "${patterns[@]}" 2>/dev/null;
+           } | sort -u || true)
 
 if [ -z "$sources" ]; then
     note "no tracked source files found"
@@ -38,7 +42,9 @@ if hits=$(grep -PnI '[^\x00-\x7F]' $sources 2>/dev/null); then
 fi
 
 # 2. tabs in C/C++ sources
-code=$(git ls-files '*.h' '*.c' '*.cpp' 2>/dev/null || true)
+code=$( { git ls-files '*.h' '*.c' '*.cpp' 2>/dev/null;
+          git ls-files --others --exclude-standard '*.h' '*.c' '*.cpp' 2>/dev/null;
+        } | sort -u || true)
 if [ -n "$code" ]; then
     if hits=$(grep -PnI '\t' $code 2>/dev/null); then
         if [ -n "$hits" ]; then

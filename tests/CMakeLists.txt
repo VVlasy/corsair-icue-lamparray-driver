@@ -25,3 +25,4 @@ cla_add_test(MappingTests
 cla_add_test(CorsairTests
     CorsairTests/FakeBackendTests.cpp
 )
+add_subdirectory(DriverSyntax)

@@ -7,7 +7,7 @@ numbers are cited so each rule can be checked. The implementation is
 
 ## The interrogation dance
 
-A host brings a LampArray up like this (§26.6):
+A host brings a LampArray up like this (s26.6):
 
 ```
 Host                                                     Device
@@ -30,7 +30,7 @@ Host                                                     Device
 
 ### The cursor auto-increments and wraps
 
-§26.8.2: after a successful response the device increments its internal
+s26.8.2: after a successful response the device increments its internal
 `LampId`, and after `LampCount-1` it **resets to 0**. A host need only send one
 request report and can then read responses in a loop.
 
@@ -39,12 +39,12 @@ specification says wrap; this project follows the specification, and
 `LampAttributes_AutoIncrementsAndWraps` pins the behaviour.
 
 The specification also tells the host to check the `LampId` in each response,
-because an invalid request is silently treated as lamp 0 (§26.8.1). Both
+because an invalid request is silently treated as lamp 0 (s26.8.1). Both
 `HidTestClient` and the test suite do check.
 
 ## Update reports are all-or-nothing
 
-§26.11.1 and §26.11.2 list errors that make the device ignore **the entire
+s26.11.1 and s26.11.2 list errors that make the device ignore **the entire
 report**:
 
 | Error | Applies to |
@@ -77,7 +77,7 @@ misbehave; nothing sets it today.
 
 ## Colour levels, and why everything is 255
 
-§26.9: a `*LevelCount` of N means values 0..N are legal, where 0 is off and N
+s26.9: a `*LevelCount` of N means values 0..N are legal, where 0 is off and N
 is maximum. `RedLevelCount = 255` therefore means the full 8-bit range.
 
 Combined with the rule above, this has a consequence worth stating on its own,
@@ -85,7 +85,7 @@ because getting it wrong yields a device that looks correct and silently does
 nothing:
 
 > If a lamp declared `IntensityLevelCount = 1` and Windows sent intensity 255,
-> §26.11.1 would require the device to **discard the entire report**.
+> s26.11.1 would require the device to **discard the entire report**.
 
 Microsoft's RP2040 sample declares `IntensityLevelCount = 1` and gets away with
 it only because it performs no validation at all. A spec-conformant device that
@@ -97,7 +97,7 @@ ever out of range -- and accurate, since Corsair LEDs are 8-bit RGB.
 
 ## Fixed-colour lamps
 
-§26.11.1: for a lamp with `IsProgrammable == 0`, only the intensity channel is
+s26.11.1: for a lamp with `IsProgrammable == 0`, only the intensity channel is
 examined; R, G and B are always ignored. `ClaApplyColor` implements this by
 preserving the existing RGB and applying only intensity, so a fixed-colour lamp
 dims and brightens but never changes hue. Corsair devices are all programmable,
@@ -106,11 +106,11 @@ LampArray implementation and honours it.
 
 ## Autonomous mode
 
-§26.10.1. A boolean, **default enabled**.
+s26.10.1. A boolean, **default enabled**.
 
-- **Enabled** — the device may drive its own lamps, and `Lamp*UpdateReports`
+- **Enabled** -- the device may drive its own lamps, and `Lamp*UpdateReports`
   may be ignored.
-- **Disabled** — only the host may change lamp state. The device pauses any
+- **Disabled** -- only the host may change lamp state. The device pauses any
   effect it was running and holds the lamps at whatever was last displayed.
 
 Attribute reports must keep working in either state.
@@ -123,7 +123,7 @@ effect", since our "autonomous" behaviour is whatever iCUE was already doing.
 
 ## Frames and batching
 
-§26.11: `LampUpdateComplete` marks the last report of a batch, and the device
+s26.11: `LampUpdateComplete` marks the last report of a batch, and the device
 applies the accumulated updates as one frame. The host will not send more than
 one such report per `MinUpdateIntervalInMicroseconds`.
 
@@ -133,7 +133,7 @@ hardware half-applied and never causes tearing.
 
 ## Geometry
 
-§26.7. The bounding box origin (0,0,0) is the topmost, farthest, left-hand
+s26.7. The bounding box origin (0,0,0) is the topmost, farthest, left-hand
 corner, and every lamp position is a positive offset from it, in micrometres.
 Every axis must be positive.
 
@@ -144,7 +144,7 @@ mapper floors each axis at 1mm. See `docs/corsair-sdk.md`.
 
 ## LampId ordering
 
-§26.8.1 recommends assigning ids methodically, grid-wise from the top left,
+s26.8.1 recommends assigning ids methodically, grid-wise from the top left,
 "to take the most advantage of the `LampRangeUpdateReport`".
 
 This is a real performance property, not a stylistic one. With row-major ids, a

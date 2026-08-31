@@ -46,6 +46,13 @@ jobs:
       - name: Validate the HID report descriptor
         run: ./build/tools/DescriptorDump/DescriptorDump --check
 
+      # The driver can only be built properly with the WDK, so on most machines
+      # it is never compiled at all. This compiles and links its sources
+      # against stub headers, which catches typos, signature mismatches and
+      # duplicate symbols anywhere. It is not a substitute for a WDK build.
+      - name: Driver syntax and linkage check
+        run: ./build/tests/DriverSyntax/DriverSyntaxCheck
+
   sanitizers:
     name: AddressSanitizer + UndefinedBehaviorSanitizer
     runs-on: ubuntu-latest

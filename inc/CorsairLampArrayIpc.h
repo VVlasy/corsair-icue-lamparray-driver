@@ -31,11 +31,21 @@
 #  include <winioctl.h>
 #endif
 
-#include <initguid.h>
-
 /*
  * Device interface exposed by the driver and opened by the service.
  * {6B4F1F0C-2C1E-4A47-9E63-2F7B9C51A7D4}
+ *
+ * This header deliberately does NOT include <initguid.h>.  Without it
+ * DEFINE_GUID expands to a declaration, which is what a header shared by many
+ * translation units must produce -- including <initguid.h> here would make
+ * every TU that pulls this in emit its own definition of the GUID, and the
+ * link would fail with duplicate symbols.
+ *
+ * Exactly one source file per binary must include <initguid.h> immediately
+ * before this header to instantiate it:
+ *
+ *   driver  -> driver/CorsairLampArray/Device.cpp
+ *   service -> service/CorsairLampArrayService/Ipc/DriverLink.cpp
  */
 DEFINE_GUID(GUID_DEVINTERFACE_CORSAIR_LAMP_ARRAY,
     0x6b4f1f0c, 0x2c1e, 0x4a47, 0x9e, 0x63, 0x2f, 0x7b, 0x9c, 0x51, 0xa7, 0xd4);

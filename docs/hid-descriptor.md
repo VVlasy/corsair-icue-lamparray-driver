@@ -133,7 +133,7 @@ writing the layout from the usage table instead of from the descriptor.
 | 19 | 32 | `Colors[8]`, 4 bytes each (R, G, B, Intensity) |
 
 Eight slots, fixed by the descriptor's `ReportCount(8)`. Slots at or beyond
-`LampCount` must be ignored (HUT 1.4 §26.11.1).
+`LampCount` must be ignored (HUT 1.4 s26.11.1).
 
 ### Report 5 - LampRangeUpdate (SET)
 

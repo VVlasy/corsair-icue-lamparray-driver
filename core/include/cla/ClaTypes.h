@@ -10,15 +10,24 @@
 #ifndef CLA_TYPES_H
 #define CLA_TYPES_H
 
-#if defined(_KERNEL_MODE)
+/*
+ * The MSVC branch is guarded on _MSC_VER as well as _KERNEL_MODE: __int8 and
+ * friends are an MSVC extension, and the driver sources are also compiled by
+ * GCC/Clang for the syntax check in tests/DriverSyntax, which defines
+ * _KERNEL_MODE to exercise this same path.  The two branches produce
+ * identically sized types either way.
+ */
+#if defined(_KERNEL_MODE) && defined(_MSC_VER)
 
+/* Kernel mode under MSVC: use the intrinsic sized types so the core has no
+ * dependency on CRT headers at all. */
 typedef unsigned __int8  cla_u8;
 typedef unsigned __int16 cla_u16;
 typedef unsigned __int32 cla_u32;
 typedef signed   __int32 cla_s32;
 typedef unsigned __int64 cla_u64;
 
-#else /* user mode */
+#else
 
 #include <stdint.h>
 typedef uint8_t  cla_u8;

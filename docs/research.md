@@ -48,26 +48,26 @@ asserts this against the descriptor rather than trusting the observation.
 Behavioural rules that are easy to get wrong, and are therefore each covered by
 a named test:
 
-- **§26.8.2 — the attribute cursor auto-increments and wraps.** After
+- **s26.8.2 -- the attribute cursor auto-increments and wraps.** After
   responding for `LampCount-1` the device resets to 0. (Microsoft's RP2040
   sample clamps instead of wrapping; the specification says wrap, and this
   project follows the specification.)
-- **§26.8.1 — an invalid `LampId` is treated as `LampId == 0`,** not as an
+- **s26.8.1 -- an invalid `LampId` is treated as `LampId == 0`,** not as an
   error.
-- **§26.11.1 / §26.11.2 — an update report containing *any* error must be
+- **s26.11.1 / s26.11.2 -- an update report containing *any* error must be
   ignored in its entirety.** Not partially applied. Errors include a `LampId`
   at or beyond `LampCount`, a duplicate `LampId` in two slots, a channel value
   above that lamp's declared level count, and `LampIdStart > LampIdEnd`.
-- **§26.11 — `LampUpdateComplete` ends a batch.** Preceding updates are
+- **s26.11 -- `LampUpdateComplete` ends a batch.** Preceding updates are
   accumulated and applied as one frame.
-- **§26.10.1 — autonomous mode defaults to enabled,** and the attribute
+- **s26.10.1 -- autonomous mode defaults to enabled,** and the attribute
   reports must keep working regardless of its state.
-- **§26.9 — a level count of N means values 0..N are legal.**
+- **s26.9 -- a level count of N means values 0..N are legal.**
 
 That last rule has a practical consequence worth stating plainly, because
 getting it wrong produces a device that looks correct and silently does
 nothing: if a lamp declared `IntensityLevelCount = 1` and Windows sent
-intensity 255, §26.11.1 would require the device to discard the whole report.
+intensity 255, s26.11.1 would require the device to discard the whole report.
 This project therefore declares **255 on every channel of every lamp**, so no
 colour Windows can express is ever out of range. See `docs/lamp-array.md`.
 
@@ -98,12 +98,12 @@ inside the lock.
 The brief asked for the upstream state to be re-checked. Nothing was found
 that bridges the iCUE SDK to a VHF virtual HID LampArray. The adjacent work is:
 
-- **OpenRGB** — talks to Corsair hardware directly over USB, bypassing iCUE
+- **OpenRGB** -- talks to Corsair hardware directly over USB, bypassing iCUE
   entirely. Solves a different problem and requires the vendor protocol
   reverse engineering this project explicitly avoids.
-- **Microsoft's firmware samples** — LampArray on real firmware, no Windows
+- **Microsoft's firmware samples** -- LampArray on real firmware, no Windows
   driver and no vendor SDK.
-- **Corsair's own iCUE** — controls the hardware but does not expose it to
+- **Corsair's own iCUE** -- controls the hardware but does not expose it to
   Windows Dynamic Lighting.
 
 Microsoft documents VHF as a supported route to a Dynamic Lighting device, and
@@ -112,18 +112,18 @@ The architecture is therefore sound and the gap is real.
 
 ## Consequences for the design
 
-1. **Feature reports only** — two VHF callbacks are the whole host-facing
+1. **Feature reports only** -- two VHF callbacks are the whole host-facing
    surface.
 2. **One static descriptor serves every device.** It encodes no lamp count:
    `LampCount` is runtime data in report 1 and every `LampId` field is 16 bits.
-3. **Lamp attributes are static** (§26.8.3), so the service can push the whole
+3. **Lamp attributes are static** (s26.8.3), so the service can push the whole
    lamp table to the driver once at creation and the driver can answer
    interrogation with no user-mode round trip. This is what keeps the HID path
    fast and keeps enumeration working while the service restarts.
 4. **A spinlock, not a wait lock**, and non-paged memory throughout the report
    path.
-5. **Positions in micrometres, times in microseconds** (§26.6), as signed
+5. **Positions in micrometres, times in microseconds** (s26.6), as signed
    32-bit quantities.
-6. **Assign LampIds methodically, top-left first** (§26.8.1), because
+6. **Assign LampIds methodically, top-left first** (s26.8.1), because
    contiguous runs let the host collapse updates into range updates instead of
    one multi-update per eight lamps.

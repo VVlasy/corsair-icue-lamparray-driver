@@ -5,6 +5,11 @@
 
 #include "Ipc/DriverLink.h"
 #include "Logging/Logger.h"
+
+/* Instantiates GUID_DEVINTERFACE_CORSAIR_LAMP_ARRAY for every binary that
+ * links this file (the service, HidTestClient).  Must precede the IPC header,
+ * and appear in exactly one translation unit -- see inc/CorsairLampArrayIpc.h. */
+#include <initguid.h>
 #include "CorsairLampArrayIpc.h"
 
 #include <setupapi.h>

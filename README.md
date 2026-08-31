@@ -126,7 +126,11 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-The driver needs Visual Studio 2022 and the WDK; see
+The driver needs Visual Studio 2022 and the WDK to build for real -- but its
+sources are also compiled and linked against stub WDK headers as part of the
+normal test run, so typos, signature mismatches and duplicate symbols are
+caught on any machine rather than waiting for someone with a WDK. That check
+found two errors that would have failed the first real build. See
 [docs/development.md](docs/development.md).
 
 ## Diagnosing problems

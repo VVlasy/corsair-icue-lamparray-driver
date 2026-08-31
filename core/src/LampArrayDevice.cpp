@@ -82,7 +82,20 @@ ClaStatus ClaLampArrayInit(
     {
         return ClaStatusInvalidArgument;
     }
-    if (attributes->LampCount == 0 || attributes->LampCount > CLA_MAX_LAMP_COUNT)
+    /*
+     * The upper bound is structural rather than checked at run time: LampCount
+     * is a 16-bit field and CLA_MAX_LAMP_COUNT is 65535, so it cannot be
+     * exceeded.  Asserting that at compile time documents the bound and, unlike
+     * a runtime comparison, cannot rot if the field type ever widens -- it
+     * would become a build failure instead of a silently dead check.
+     */
+    static_assert(sizeof(attributes->LampCount) == 2,
+                  "LampCount is assumed to be 16-bit; widen the bounds check "
+                  "in ClaLampArrayInit if it changes");
+    static_assert(CLA_MAX_LAMP_COUNT == 0xFFFFu,
+                  "CLA_MAX_LAMP_COUNT must match the width of the LampId field");
+
+    if (attributes->LampCount == 0)
     {
         return ClaStatusInvalidArgument;
     }

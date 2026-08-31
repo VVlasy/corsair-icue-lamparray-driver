@@ -5,6 +5,11 @@
  * Creation of the root-enumerated software device the service talks to.
  */
 
+/* Instantiates GUID_DEVINTERFACE_CORSAIR_LAMP_ARRAY for the driver binary.
+ * Must appear before Driver.h, and in exactly one translation unit -- see the
+ * note in inc/CorsairLampArrayIpc.h. */
+#include <initguid.h>
+
 #include "Driver.h"
 
 #ifdef ALLOC_PRAGMA
