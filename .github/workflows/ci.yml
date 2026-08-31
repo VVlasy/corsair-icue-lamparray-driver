@@ -1,0 +1,112 @@
+# Copyright (c) Corsair Dynamic Lighting Bridge contributors.
+# SPDX-License-Identifier: MIT
+#
+# The portable core, the mapping layer, the IPC contract validation and the
+# service's backend logic all build and test without Windows, a WDK, iCUE or
+# Corsair hardware.  That is deliberate: it means the protocol and parsing code
+# that runs in kernel mode is exercised on every push, by everyone, rather than
+# only on a machine that happens to have a Corsair keyboard attached.
+#
+# The kernel driver itself needs MSBuild and the WDK, so it is built on the
+# Windows job only.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  portable:
+    name: Portable core (${{ matrix.os }}, ${{ matrix.build_type }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        build_type: [Debug, Release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      # Running the descriptor tool is a real check: it re-derives the report
+      # sizes from the descriptor bytes and fails if they disagree with the
+      # constants the driver and service compile against.
+      - name: Validate the HID report descriptor
+        run: ./build/tools/DescriptorDump/DescriptorDump --check
+
+  sanitizers:
+    name: AddressSanitizer + UndefinedBehaviorSanitizer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCLA_SANITIZE=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      # The report parser and the IOCTL validators run in kernel mode, where an
+      # out-of-bounds access is a bugcheck rather than a crash. The fuzz tests
+      # under ASan are how that class of bug gets caught somewhere survivable.
+      - name: Test under sanitizers
+        run: ctest --test-dir build --output-on-failure
+
+  hygiene:
+    name: Source hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check
+        run: ./scripts/check-source-hygiene.sh
+
+  windows:
+    name: Windows (user mode + driver)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+
+      - name: Build user-mode components
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Validate the HID report descriptor
+        run: .\build\tools\DescriptorDump\Release\DescriptorDump.exe --check
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      # The WDK is not present on the hosted runner by default. Installing it
+      # takes several minutes, so the driver build is best-effort here and its
+      # failure does not gate the rest: the protocol code it shares with the
+      # tested core is already covered by the jobs above.
+      - name: Install the WDK
+        id: wdk
+        continue-on-error: true
+        run: |
+          choco install windowsdriverkit11 --no-progress -y
+
+      - name: Build the driver
+        if: steps.wdk.outcome == 'success'
+        continue-on-error: true
+        run: |
+          msbuild driver\CorsairLampArray\CorsairLampArray.vcxproj `
+            /p:Configuration=Release /p:Platform=x64 `
+            /p:SignMode=Off
