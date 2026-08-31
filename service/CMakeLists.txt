@@ -11,6 +11,7 @@
 add_library(cla_backend STATIC
     CorsairLampArrayService/Corsair/FakeBackend.cpp
     CorsairLampArrayService/Corsair/BackendTypes.cpp
+    CorsairLampArrayService/Corsair/IcueSdkApi.cpp
     CorsairLampArrayService/Devices/FramePipeline.cpp
     CorsairLampArrayService/Logging/Logger.cpp
 )
@@ -32,6 +33,6 @@ if(WIN32)
     )
     target_link_libraries(CorsairLampArrayService PRIVATE
         cla_backend cla_core cla_mapping
-        setupapi cfgmgr32
+        setupapi cfgmgr32 shell32 ole32
     )
 endif()
