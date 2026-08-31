@@ -3,7 +3,7 @@
 
 function(cla_add_test target)
     add_executable(${target} ${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp ${ARGN})
-    target_link_libraries(${target} PRIVATE cla_core cla_mapping)
+    target_link_libraries(${target} PRIVATE cla_core cla_mapping cla_backend)
     target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     add_test(NAME ${target} COMMAND ${target})
 endfunction()

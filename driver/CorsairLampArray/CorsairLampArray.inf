@@ -1,0 +1,78 @@
+;
+; CorsairLampArray.inf -- Corsair Dynamic Lighting Bridge HID source driver
+;
+; SPDX-License-Identifier: MIT
+;
+; Installs CorsairLampArray.sys as a root-enumerated software device.  There is
+; no physical hardware behind it: the driver's purpose is to create virtual HID
+; LampArray devices on behalf of the user-mode service.
+;
+; The critical line in this file is the LowerFilters entry.  Microsoft's
+; in-box Vhf.sys must sit BELOW this driver in the stack; it is what actually
+; builds the virtual HID tree and enumerates the PDOs that Hidclass.sys then
+; presents to Windows.  Without it VhfCreate has nothing to talk to and no
+; LampArray ever appears.
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider    = %ManufacturerName%
+CatalogFile = CorsairLampArray.cat
+DriverVer   = 01/01/2026,0.1.0.0
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13    ; the driver store package directory
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+CorsairLampArray.sys = 1,,
+
+[Manufacturer]
+%ManufacturerName% = Standard,NT$ARCH$.10.0...16299
+
+; Windows 10 1709 and later.  VHF exists earlier, but Dynamic Lighting itself
+; requires Windows 11 23H2; older systems load the driver and expose the HID
+; LampArray without the Settings integration.
+[Standard.NT$ARCH$.10.0...16299]
+%DeviceDesc% = CorsairLampArray_Install, ROOT\CorsairLampArray
+
+[CorsairLampArray_Install.NT]
+CopyFiles = CorsairLampArray_CopyFiles
+
+[CorsairLampArray_CopyFiles]
+CorsairLampArray.sys
+
+[CorsairLampArray_Install.NT.HW]
+AddReg = CorsairLampArray_AddReg
+
+[CorsairLampArray_AddReg]
+; Vhf.sys must load as a lower filter beneath this driver.  See the note at the
+; top of this file.
+HKR,,"LowerFilters",0x00010000,"vhf"
+
+[CorsairLampArray_Install.NT.Services]
+AddService = CorsairLampArray,0x00000002,CorsairLampArray_Service
+
+[CorsairLampArray_Service]
+DisplayName   = %ServiceDesc%
+ServiceType   = 1               ; SERVICE_KERNEL_DRIVER
+StartType     = 3               ; SERVICE_DEMAND_START
+ErrorControl  = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary = %13%\CorsairLampArray.sys
+
+[CorsairLampArray_Install.NT.Wdf]
+KmdfService = CorsairLampArray, CorsairLampArray_wdfsect
+
+[CorsairLampArray_wdfsect]
+KmdfLibraryVersion = 1.33
+
+[Strings]
+ManufacturerName = "Corsair Dynamic Lighting Bridge contributors"
+DiskName         = "Corsair Dynamic Lighting Bridge Installation Disk"
+DeviceDesc       = "Corsair LampArray Bridge"
+ServiceDesc      = "Corsair LampArray Bridge Driver"

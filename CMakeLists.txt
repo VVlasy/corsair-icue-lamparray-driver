@@ -52,8 +52,7 @@ if(CLA_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-# The service links the iCUE SDK and the Windows service APIs, so it only
-# builds on Windows.
-if(WIN32)
-    add_subdirectory(service)
-endif()
+# The service.  Its backend abstraction and fake backend are portable and
+# always build, so they can be tested on CI without Windows, iCUE or hardware;
+# the iCUE backend and the Windows service host inside only build on Windows.
+add_subdirectory(service)
