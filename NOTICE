@@ -1,0 +1,38 @@
+Corsair Dynamic Lighting Bridge
+===============================
+
+This project is licensed under the MIT License (see LICENSE).
+
+Third-party material incorporated in this repository
+----------------------------------------------------
+
+1. HID LampArray report descriptor
+   core/src/LampArrayDescriptor.cpp
+
+   The 292 descriptor bytes are reproduced from Microsoft's LampArray firmware
+   sample:
+
+       https://github.com/microsoft/ArduinoHidForWindows
+       src/LampArrayReportDescriptor.h
+       Copyright (c) Microsoft Corporation. All rights reserved.
+       Licensed under the MIT License.
+
+   Microsoft's Dynamic Lighting device documentation points at that repository
+   as the reference implementation, and the bytes were generated there by
+   WaratahCmd.exe (https://github.com/microsoft/hidtools) from HID Usage Tables
+   1.4.  They are reproduced rather than re-derived so that the descriptor is
+   known-good; every item was cross-checked against the specification.
+
+Third-party material NOT redistributed
+--------------------------------------
+
+2. Corsair iCUE SDK
+
+   This project does NOT contain, vendor or redistribute any part of the
+   Corsair iCUE SDK -- no headers, no import libraries and no binaries.
+
+   The service loads the SDK at run time from the user's own iCUE
+   installation.  The iCUE SDK is published by Corsair under its own terms;
+   consult those terms before redistributing any part of it.  See
+   docs/corsair-sdk.md for how the dependency is discovered and loaded, and
+   what the user must install.
