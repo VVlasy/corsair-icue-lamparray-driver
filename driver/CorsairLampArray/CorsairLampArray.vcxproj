@@ -42,6 +42,10 @@
     <Configuration>Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">x64</Platform>
     <RootNamespace>CorsairLampArray</RootNamespace>
+    <!-- Repository root, from this file's location.  Not SolutionDir:
+         the project is built directly with msbuild and there is no .sln, so
+         SolutionDir is undefined and the include paths came out wrong. -->
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepoRoot>
   </PropertyGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -69,15 +73,15 @@
   </ImportGroup>
 
   <PropertyGroup>
-    <IntDir>$(SolutionDir)build\driver\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>$(SolutionDir)build\driver\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(RepoRoot)build\driver\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(RepoRoot)build\driver\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)inc;$(SolutionDir)core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(RepoRoot)inc;$(RepoRoot)core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_KERNEL_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- The core is written to compile as C++ without exceptions or RTTI. -->
       <ExceptionHandling>false</ExceptionHandling>
