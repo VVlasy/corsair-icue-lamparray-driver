@@ -40,6 +40,29 @@ typedef enum _ClaSourceUnits
     ClaSourceUnitsLogical = 1
 } ClaSourceUnits;
 
+/*
+ * How much of the machine a device's LEDs span.
+ *
+ * LampArrayKind alone cannot size a logical-unit device: HUT 1.4 table 26.2.1
+ * files both a single fan and a controller driving every fan and strip in the
+ * case under Chassis.  Scaling a whole-case controller onto a one-fan envelope
+ * tells Windows the entire case is 12cm across, so effects that sweep "across
+ * the PC" instead run across a few centimetres.  The backend knows which kind
+ * of device it has; this carries that into the mapper without the mapper
+ * having to know any backend's device taxonomy.
+ *
+ * Zero is a single component, so a zero-initialised ClaSourceDevice keeps the
+ * per-kind envelope.
+ */
+typedef enum _ClaSourceScope
+{
+    /* One component: a fan, a RAM stick, a cooler, a keyboard. */
+    ClaSourceScopeComponent = 0,
+    /* A controller whose LEDs are spread through the whole case (fan and LED
+     * hubs).  Only changes the envelope for Chassis devices. */
+    ClaSourceScopeWholeCase = 1
+} ClaSourceScope;
+
 typedef struct _ClaSourceLed
 {
     /* Opaque backend LED identifier (a CorsairLedLuid for the iCUE backend).
@@ -53,6 +76,7 @@ typedef struct _ClaSourceDevice
 {
     cla_u32 LampArrayKind;          /* ClaLampArrayKind */
     cla_u32 Units;                  /* ClaSourceUnits */
+    cla_u32 Scope;                  /* ClaSourceScope */
     cla_u32 LedCount;
     const ClaSourceLed *Leds;
 } ClaSourceDevice;
@@ -124,11 +148,20 @@ ClaStatus ClaBuildLampTable(
 cla_u32 ClaDefaultLampPurposeForKind(cla_u32 lampArrayKind);
 
 /* Nominal physical size, in micrometres, used to scale logical-unit devices
- * and to floor degenerate bounding boxes. */
+ * and to give the bounding box its depth.  Equivalent to ClaNominalSize with
+ * ClaSourceScopeComponent. */
 void ClaNominalSizeForKind(cla_u32 lampArrayKind,
                            cla_u32 *widthMicrometers,
                            cla_u32 *heightMicrometers,
                            cla_u32 *depthMicrometers);
+
+/* Nominal physical size for a device kind and scope (ClaSourceScope).  An
+ * unknown scope is treated as ClaSourceScopeComponent. */
+void ClaNominalSize(cla_u32 lampArrayKind,
+                    cla_u32 scope,
+                    cla_u32 *widthMicrometers,
+                    cla_u32 *heightMicrometers,
+                    cla_u32 *depthMicrometers);
 
 #ifdef __cplusplus
 } /* extern "C" */

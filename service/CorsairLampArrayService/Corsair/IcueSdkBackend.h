@@ -59,11 +59,6 @@ public:
      * and so the search can be tested/reported rather than being a black box. */
     static std::vector<std::wstring> CandidateSdkPaths();
 
-    /* Map an iCUE device type onto a LampArray kind. */
-    static cla_u32 LampArrayKindForType(int corsairDeviceType);
-    /* Whether a device type reports positions in mm or logical units. */
-    static cla_u32 PositionUnitsForType(int corsairDeviceType);
-
 private:
     static void OnSessionStateChangedThunk(void *context,
                                            const icue::SessionStateChanged *eventData);

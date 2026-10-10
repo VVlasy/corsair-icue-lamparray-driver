@@ -74,9 +74,19 @@ void ClaNominalSizeForKind(cla_u32 lampArrayKind,
                            cla_u32 *heightMicrometers,
                            cla_u32 *depthMicrometers)
 {
+    ClaNominalSize(lampArrayKind, ClaSourceScopeComponent,
+                   widthMicrometers, heightMicrometers, depthMicrometers);
+}
+
+void ClaNominalSize(cla_u32 lampArrayKind,
+                    cla_u32 scope,
+                    cla_u32 *widthMicrometers,
+                    cla_u32 *heightMicrometers,
+                    cla_u32 *depthMicrometers)
+{
     /* Rough real-world envelopes, in micrometres.  Used to give logical-unit
-     * devices a physical scale and to floor degenerate boxes.  Only the
-     * relative proportions matter to host effects. */
+     * devices a physical scale and the box a depth.  Only the relative
+     * proportions matter to host effects. */
     cla_u32 w = 100000, h = 100000, d = 30000;
 
     switch (lampArrayKind)
@@ -86,7 +96,18 @@ void ClaNominalSizeForKind(cla_u32 lampArrayKind,
     case ClaLampArrayKindGameController: w = 160000; h = 105000; d = 60000;  break;
     case ClaLampArrayKindPeripheral:     w = 350000; h = 300000; d = 5000;   break; /* mousepad */
     case ClaLampArrayKindWearable:       w = 180000; h = 200000; d = 90000;  break; /* headset */
-    case ClaLampArrayKindChassis:        w = 120000; h = 120000; d = 25000;  break; /* fan / RAM */
+    case ClaLampArrayKindChassis:
+        if (scope == ClaSourceScopeWholeCase)
+        {
+            /* A mid-tower seen from the front: Corsair's 4000D is
+             * 230 W x 466 H x 453 D mm. */
+            w = 230000; h = 466000; d = 453000;
+        }
+        else
+        {
+            w = 120000; h = 120000; d = 25000;   /* one 120mm fan */
+        }
+        break;
     default: break;
     }
 
@@ -156,7 +177,7 @@ ClaStatus ClaBuildLampTable(
     const double spanY = maxY - minY;
 
     cla_u32 nominalW = 0, nominalH = 0, nominalD = 0;
-    ClaNominalSizeForKind(device->LampArrayKind, &nominalW, &nominalH, &nominalD);
+    ClaNominalSize(device->LampArrayKind, device->Scope, &nominalW, &nominalH, &nominalD);
 
     /* ---- 2. Establish a scale from source units to micrometres. ------- */
     double scaleX, scaleY;

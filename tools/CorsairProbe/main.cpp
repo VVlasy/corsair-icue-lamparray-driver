@@ -112,6 +112,8 @@ void PrintDevice(ICorsairBackend &backend, const BackendDeviceInfo &info, bool v
     std::printf("  position units: %s\n",
                 info.PositionUnits == ClaSourceUnitsMillimeters ? "millimetres"
                                                                 : "logical");
+    std::printf("  scope        : %s\n",
+                info.Scope == ClaSourceScopeWholeCase ? "whole case" : "component");
 
     std::vector<ClaSourceLed> leds;
     const BackendStatus status = backend.GetLamps(info.Id, leds);
@@ -141,6 +143,7 @@ void PrintDevice(ICorsairBackend &backend, const BackendDeviceInfo &info, bool v
         ClaSourceDevice source{};
         source.LampArrayKind = info.LampArrayKind;
         source.Units = info.PositionUnits;
+        source.Scope = info.Scope;
         source.LedCount = static_cast<cla_u32>(leds.size());
         source.Leds = leds.data();
 

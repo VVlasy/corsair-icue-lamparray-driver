@@ -12,6 +12,7 @@ add_library(cla_backend STATIC
     CorsairLampArrayService/Corsair/FakeBackend.cpp
     CorsairLampArrayService/Corsair/BackendTypes.cpp
     CorsairLampArrayService/Corsair/IcueSdkApi.cpp
+    CorsairLampArrayService/Corsair/IcueDeviceClass.cpp
     CorsairLampArrayService/Devices/FramePipeline.cpp
     CorsairLampArrayService/Logging/Logger.cpp
 )

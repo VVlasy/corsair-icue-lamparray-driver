@@ -200,7 +200,8 @@ void FakeBackend::AddDevice(const std::string &id,
                             const std::string &model,
                             cla_u32 lampArrayKind,
                             const std::vector<ClaSourceLed> &leds,
-                            cla_u32 positionUnits)
+                            cla_u32 positionUnits,
+                            cla_u32 scope)
 {
     {
         std::lock_guard<std::mutex> guard(m_mutex);
@@ -210,6 +211,7 @@ void FakeBackend::AddDevice(const std::string &id,
         device.Info.Serial = id;
         device.Info.LampArrayKind = lampArrayKind;
         device.Info.PositionUnits = positionUnits;
+        device.Info.Scope = scope;
         device.Info.LedCount = static_cast<cla_u32>(leds.size());
         device.Info.ChannelCount = 0;
         device.Leds = leds;

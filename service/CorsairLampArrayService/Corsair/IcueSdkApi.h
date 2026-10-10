@@ -137,7 +137,7 @@ struct LedPosition
     LedLuid id;
     /* Millimetres for keyboards, mice, mousemats, headset stands and memory
      * modules; logical units for DIY devices, headsets and coolers.  See
-     * IcueSdkBackend::PositionUnitsForType. */
+     * icue::PositionUnitsForType (IcueDeviceClass.h). */
     double cx;
     double cy;
 };

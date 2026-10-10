@@ -60,7 +60,8 @@ public:
                    const std::string &model,
                    cla_u32 lampArrayKind,
                    const std::vector<ClaSourceLed> &leds,
-                   cla_u32 positionUnits = ClaSourceUnitsMillimeters);
+                   cla_u32 positionUnits = ClaSourceUnitsMillimeters,
+                   cla_u32 scope = ClaSourceScopeComponent);
 
     /* Add a keyboard-shaped grid; convenient for most tests. */
     void AddKeyboard(const std::string &id, int rows = 6, int columns = 18);

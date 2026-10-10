@@ -256,6 +256,7 @@ bool DeviceManager::AddDevice(const BackendDeviceInfo &info)
     ClaSourceDevice source{};
     source.LampArrayKind = info.LampArrayKind;
     source.Units = info.PositionUnits;
+    source.Scope = info.Scope;
     source.LedCount = static_cast<cla_u32>(leds.size());
     source.Leds = leds.data();
 

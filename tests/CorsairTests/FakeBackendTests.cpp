@@ -51,6 +51,7 @@ FramePipeline MakePipelineFor(FakeBackend &backend, const std::string &id,
     ClaSourceDevice device{};
     device.LampArrayKind = info.LampArrayKind;
     device.Units = info.PositionUnits;
+    device.Scope = info.Scope;
     device.LedCount = static_cast<cla_u32>(leds.size());
     device.Leds = leds.data();
 
@@ -87,6 +88,31 @@ CLA_TEST(Backend_EnumeratesConnectedDevices)
     CLA_CHECK(devices[0].Id == "kb-1");
     CLA_CHECK_EQ(devices[0].LedCount, 6u * 18u);
     CLA_CHECK_EQ(devices[0].LampArrayKind, static_cast<cla_u32>(ClaLampArrayKindKeyboard));
+}
+
+/* The scope has to survive the backend boundary, or the mapper never sees it
+ * and a whole-case controller is sized as one fan. */
+CLA_TEST(Backend_CarriesSourceScope)
+{
+    FakeBackend backend;
+    backend.AddDevice("hub", "Fake Lighting Node", ClaLampArrayKindChassis,
+                      {{1, 0.0, 0.0}, {2, 0.0, 3.0}}, ClaSourceUnitsLogical,
+                      ClaSourceScopeWholeCase);
+    backend.Initialize();
+
+    BackendDeviceInfo info{};
+    CLA_CHECK(backend.GetDeviceInfo("hub", info) == BackendStatus::Ok);
+    CLA_CHECK_EQ(info.Scope, static_cast<cla_u32>(ClaSourceScopeWholeCase));
+
+    std::vector<BackendDeviceInfo> devices;
+    CLA_CHECK(backend.EnumerateDevices(devices) == BackendStatus::Ok);
+    CLA_CHECK_EQ(devices.size(), 1u);
+    CLA_CHECK_EQ(devices[0].Scope, static_cast<cla_u32>(ClaSourceScopeWholeCase));
+
+    /* And a device added without one is a component. */
+    auto keyboard = MakeBackendWithKeyboard();
+    CLA_CHECK(keyboard->GetDeviceInfo("kb-1", info) == BackendStatus::Ok);
+    CLA_CHECK_EQ(info.Scope, static_cast<cla_u32>(ClaSourceScopeComponent));
 }
 
 CLA_TEST(Backend_LedPositionsAreRetrievable)
@@ -440,6 +466,7 @@ CLA_TEST(EndToEnd_FrameReachesTheCorrectLeds)
     ClaSourceDevice source{};
     source.LampArrayKind = info.LampArrayKind;
     source.Units = info.PositionUnits;
+    source.Scope = info.Scope;
     source.LedCount = static_cast<cla_u32>(leds.size());
     source.Leds = leds.data();
 
