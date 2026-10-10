@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  CorsairLampArray.sys -- KMDF HID source driver.
+  CorsairLampArray.sys: KMDF HID source driver.
 
   Built with Visual Studio 2022 and the Windows Driver Kit; see
   docs/development.md.  This project is intentionally the ONLY place the

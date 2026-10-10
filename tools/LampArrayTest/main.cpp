@@ -149,7 +149,7 @@ void Describe(const FoundLampArray &found, bool verbose)
 
     const auto bounds = array.BoundingBox();
     std::printf("  bounding box    : %.1f x %.1f x %.1f mm\n",
-                bounds.X * 1000.0, bounds.Y * 1000.0, bounds.Z * 1000.0);
+                bounds.x * 1000.0, bounds.y * 1000.0, bounds.z * 1000.0);
     std::printf("  brightness      : %.2f\n", array.BrightnessLevel());
 
     if (!array.IsAvailable())
@@ -175,8 +175,10 @@ void Describe(const FoundLampArray &found, bool verbose)
             const auto position = info.Position();
             std::printf("  %-8d %9.1f %9.1f %9.1f %7s 0x%02X\n",
                         info.Index(),
-                        position.X * 1000.0, position.Y * 1000.0, position.Z * 1000.0,
-                        info.IsProgrammable() ? "yes" : "no",
+                        position.x * 1000.0, position.y * 1000.0, position.z * 1000.0,
+                        /* WinRT has no IsProgrammable; a non-programmable lamp
+                         * is one that reports a FixedColor. */
+                        info.FixedColor() ? "no" : "yes",
                         static_cast<unsigned>(info.Purposes()));
         }
         if (!verbose && lampCount > toShow)
@@ -270,13 +272,13 @@ int RunRainbow(const FoundLampArray &found)
     std::vector<double> normalisedX(static_cast<size_t>(lampCount));
 
     const auto bounds = array.BoundingBox();
-    const double width = (bounds.X > 0.0) ? bounds.X : 1.0;
+    const double width = (bounds.x > 0.0) ? bounds.x : 1.0;
 
     for (int i = 0; i < lampCount; ++i)
     {
         indices[static_cast<size_t>(i)] = i;
         const LampInfo info = array.GetLampInfo(i);
-        normalisedX[static_cast<size_t>(i)] = info.Position().X / width;
+        normalisedX[static_cast<size_t>(i)] = info.Position().x / width;
     }
 
     double phase = 0.0;
