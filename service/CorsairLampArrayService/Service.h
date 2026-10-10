@@ -8,6 +8,7 @@
 #define CLA_SERVICE_H
 
 #include "Devices/DeviceManager.h"
+#include "Logging/Logger.h"
 
 #include <string>
 
@@ -21,7 +22,9 @@ struct ServiceOptions
      * recognition before Corsair integration). */
     bool UseFakeBackend = false;
     std::string LogPath;
-    LogLevel LogLevel = LogLevel::Info;
+    /* Qualified: the member shares the enum's name, so an unqualified
+     * LogLevel:: in the initialiser would name the member, not the type. */
+    cla::LogLevel LogLevel = cla::LogLevel::Info;
     /* Run in the console instead of as a service. */
     bool Console = false;
 };
