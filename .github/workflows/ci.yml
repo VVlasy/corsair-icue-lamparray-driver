@@ -99,6 +99,10 @@ jobs:
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
+        # The action defaults to the 32-bit MSBuild, and the WDK's InfVerif
+        # task then loads x86\InfVerif.dll, which the NuGet WDK does not ship.
+        with:
+          msbuild-architecture: x64
 
       # The hosted runner has no WDK.  Restore it as pinned NuGet packages
       # (driver/packages.config); driver/Directory.Build.props points the

@@ -82,7 +82,8 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>$(ProjectDir);$(RepoRoot)inc;$(RepoRoot)core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_KERNEL_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- No _KERNEL_MODE here: the compiler predefines it for kernel-mode
+           builds, and redefining it is warning C4117 (an error under /WX). -->
       <!-- The core is written to compile as C++ without exceptions or RTTI. -->
       <ExceptionHandling>false</ExceptionHandling>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
