@@ -1,0 +1,34 @@
+<!--
+  Copyright (c) Corsair Dynamic Lighting Bridge contributors.
+  SPDX-License-Identifier: MIT
+
+  Picks up the NuGet WDK and SDK from driver\packages when they have been
+  restored (see packages.config).  Each import is conditional, so without a
+  restore the installed WDK is used as before.  Lives under driver\ rather
+  than the repository root so the CMake-generated user-mode projects never
+  see it.
+-->
+<Project>
+  <PropertyGroup>
+    <ClaWdkNuGetVersion>10.0.28000.2526</ClaWdkNuGetVersion>
+    <ClaPackages>$(MSBuildThisFileDirectory)packages\</ClaPackages>
+    <ClaWdkNuGet>$(ClaPackages)Microsoft.Windows.WDK.x64.$(ClaWdkNuGetVersion)\</ClaWdkNuGet>
+  </PropertyGroup>
+  <!-- Only when the NuGet WDK is restored.  Left alone, the WDK picks the
+       newest SDK installed on the machine as the target platform (10.0.26100
+       on the hosted runner), then looks for its own headers and tools under
+       that version inside the package, where they do not exist.  And the
+       package ships stampinf.exe for x64 and ARM64 only, while the WDK
+       targets default to the x86 one. -->
+  <PropertyGroup Condition="Exists('$(ClaWdkNuGet)build\native\Microsoft.Windows.WDK.x64.props') and '$(Platform)' == 'x64'">
+    <WindowsTargetPlatformVersion>10.0.28000.0</WindowsTargetPlatformVersion>
+    <InfToolPath>$(ClaWdkNuGet)c\bin\10.0.28000.0\x64\</InfToolPath>
+    <InfToolArchitecture>Native64Bit</InfToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(ClaPackages)Microsoft.Windows.WDK.x64.$(ClaWdkNuGetVersion)\build\native\Microsoft.Windows.WDK.x64.props"
+          Condition="Exists('$(ClaPackages)Microsoft.Windows.WDK.x64.$(ClaWdkNuGetVersion)\build\native\Microsoft.Windows.WDK.x64.props') and '$(Platform)' == 'x64'" />
+  <Import Project="$(ClaPackages)Microsoft.Windows.SDK.CPP.x64.$(ClaWdkNuGetVersion)\build\native\Microsoft.Windows.SDK.cpp.x64.props"
+          Condition="Exists('$(ClaPackages)Microsoft.Windows.SDK.CPP.x64.$(ClaWdkNuGetVersion)\build\native\Microsoft.Windows.SDK.cpp.x64.props') and '$(Platform)' == 'x64'" />
+  <Import Project="$(ClaPackages)Microsoft.Windows.SDK.CPP.$(ClaWdkNuGetVersion)\build\native\Microsoft.Windows.SDK.cpp.props"
+          Condition="Exists('$(ClaPackages)Microsoft.Windows.SDK.CPP.$(ClaWdkNuGetVersion)\build\native\Microsoft.Windows.SDK.cpp.props')" />
+</Project>

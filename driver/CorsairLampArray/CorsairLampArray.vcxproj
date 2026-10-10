@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CorsairLampArray.sys: KMDF HID source driver.
+
+  Built with Visual Studio 2022 and the Windows Driver Kit; see
+  docs/development.md.  This project is intentionally the ONLY place the
+  kernel-safe core sources are compiled for kernel mode: it lists them
+  explicitly rather than globbing, so that adding a file to core/ that is not
+  kernel-safe (anything using the CRT, the STL, floating point or exceptions)
+  cannot silently end up in the driver.
+
+  Note which core sources are absent: CorsairMapping.cpp is NOT here.  It uses
+  floating point, which in kernel mode would require KeSaveFloatingPointState.
+  It belongs to the service.
+-->
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2F5B9C41-8D3A-4E27-9C10-5A6E7B8D0C31}</ProjectGuid>
+    <TemplateGuid>{497e31cb-056b-4f31-abb8-447fd55ee5a5}</TemplateGuid>
+    <TargetVersion>Windows10</TargetVersion>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
+    <Configuration>Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <RootNamespace>CorsairLampArray</RootNamespace>
+    <!-- Repository root, from this file's location.  Not SolutionDir:
+         the project is built directly with msbuild and there is no .sln, so
+         SolutionDir is undefined and the include paths came out wrong. -->
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepoRoot>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries Condition="'$(Configuration)'=='Debug'">true</UseDebugLibraries>
+    <UseDebugLibraries Condition="'$(Configuration)'=='Release'">false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>KMDF</DriverType>
+    <!-- Static analysis and Code Analysis on by default: this is kernel code
+         handling untrusted input, so the extra build time is worth it. -->
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <EnablePREfast>true</EnablePREfast>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
+            Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
+            Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <PropertyGroup>
+    <IntDir>$(RepoRoot)build\driver\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(RepoRoot)build\driver\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(RepoRoot)inc;$(RepoRoot)core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- No _KERNEL_MODE here: the compiler predefines it for kernel-mode
+           builds, and redefining it is warning C4117 (an error under /WX). -->
+      <!-- The core is written to compile as C++ without exceptions or RTTI. -->
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <!-- vhfkm.lib provides VhfCreate/VhfStart/VhfDelete and friends. -->
+      <AdditionalDependencies>$(DDK_LIB_PATH)\vhfkm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Inf>
+      <TimeStampServer>http://timestamp.digicert.com</TimeStampServer>
+    </Inf>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="VhfDevice.cpp" />
+    <ClCompile Include="Reports.cpp" />
+    <ClCompile Include="Ioctl.cpp" />
+
+    <!-- Kernel-safe core sources, shared verbatim with the user-mode tests.
+         Listed explicitly: see the comment at the top of this file. -->
+    <ClCompile Include="..\..\core\src\LampArrayDescriptor.cpp" />
+    <ClCompile Include="..\..\core\src\LampArrayDevice.cpp" />
+    <ClCompile Include="..\..\core\src\HidDescriptorParser.cpp" />
+    <ClCompile Include="..\..\core\src\IpcContract.cpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="Driver.h" />
+    <ClInclude Include="..\..\inc\CorsairLampArrayIpc.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Inf Include="CorsairLampArray.inf" />
+    <!-- The WDK packages INFs automatically but not the binary they install;
+         without this, Inf2Cat finds no .sys in the package (error 22.9.1). -->
+    <FilesToPackage Include="$(TargetPath)" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
