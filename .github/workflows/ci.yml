@@ -100,15 +100,14 @@ jobs:
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      # The WDK is not present on the hosted runner by default. Installing it
-      # takes several minutes, so the driver build is best-effort here and its
-      # failure does not gate the rest: the protocol code it shares with the
-      # tested core is already covered by the jobs above.
-      - name: Install the WDK
+      # The hosted runner has no WDK.  Restore it as pinned NuGet packages
+      # (driver/packages.config); driver/Directory.Build.props points the
+      # project at them.  Still best-effort while the first real driver
+      # build is being brought up.
+      - name: Restore the WDK
         id: wdk
         continue-on-error: true
-        run: |
-          choco install windowsdriverkit11 --no-progress -y
+        run: nuget restore driver\packages.config -PackagesDirectory driver\packages
 
       - name: Build the driver
         if: steps.wdk.outcome == 'success'

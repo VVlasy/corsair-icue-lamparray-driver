@@ -30,3 +30,6 @@ Testing/
 # Corsair SDK -- never redistributed, see docs/corsair-sdk.md
 third_party/iCUESDK/
 *.dll
+
+# NuGet WDK/SDK restored by driver\packages.config
+driver/packages/
