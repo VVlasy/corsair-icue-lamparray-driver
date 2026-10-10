@@ -112,9 +112,17 @@ Windows then positions effects on a device it believes is either microscopic or
 metres across. Nothing errors; the lighting is just wrong in a way that is hard
 to attribute.
 
-`IcueSdkBackend::PositionUnitsForType` therefore classifies each device type,
-and the mapper scales logical-unit devices onto a nominal physical envelope for
-their kind, using one factor for both axes so the layout is not distorted.
+`icue::PositionUnitsForType` therefore classifies each device type, and the
+mapper scales logical-unit devices onto a nominal physical envelope for their
+kind, using one factor for both axes so the layout is not distorted.
+
+Kind alone is not enough to pick that envelope. A single fan and a Commander or
+Lighting Node driving every fan and strip in the case are both `Chassis`, but
+one is 12cm across and the other is the whole case. `icue::SourceScopeForType`
+marks fan and LED controllers (`CDT_FanLedController`, `CDT_LedController`) as
+whole-case, and the mapper gives them a mid-tower envelope (230 x 466 x 453mm,
+Corsair's 4000D) instead of the 120mm fan envelope. Coolers stay component-sized:
+the SDK gives no radiator size to choose between 120mm and 360mm.
 
 ## Failure modes
 

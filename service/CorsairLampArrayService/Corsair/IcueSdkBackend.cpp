@@ -6,6 +6,7 @@
  */
 
 #include "Corsair/IcueSdkBackend.h"
+#include "Corsair/IcueDeviceClass.h"
 #include "Logging/Logger.h"
 
 #include <windows.h>
@@ -225,66 +226,6 @@ BackendStatus IcueSdkBackend::MapError(icue::Error error) const
     case icue::CE_NotAllowed:           return BackendStatus::NotSupported;
     case icue::CE_InvalidOperation:     return BackendStatus::Failed;
     default:                            return BackendStatus::Failed;
-    }
-}
-
-cla_u32 IcueSdkBackend::LampArrayKindForType(int corsairDeviceType)
-{
-    /*
-     * Map iCUE's device taxonomy onto the LampArrayKind values from HUT 1.4
-     * table 26.2.1.  Windows uses the kind to decide which effects suit a
-     * device, so a mouse must not claim to be a keyboard.
-     */
-    switch (corsairDeviceType)
-    {
-    case icue::CDT_Keyboard:         return ClaLampArrayKindKeyboard;
-    case icue::CDT_Mouse:            return ClaLampArrayKindMouse;
-    case icue::CDT_GameController:   return ClaLampArrayKindGameController;
-
-    /* Mousemats, headset stands and touchbars are accessories the user looks
-     * at but does not wear: "Peripheral" per the spec's own examples
-     * ("speakers, mousepad, microphone, webcam"). */
-    case icue::CDT_Mousemat:
-    case icue::CDT_HeadsetStand:
-    case icue::CDT_Touchbar:         return ClaLampArrayKindPeripheral;
-
-    /* "LampArray is embedded in a wearable accessory (audio-headset, ...)" */
-    case icue::CDT_Headset:          return ClaLampArrayKindWearable;
-
-    /* Internal PC components: the spec names RAM sticks, motherboards and fans
-     * explicitly under Chassis. */
-    case icue::CDT_FanLedController:
-    case icue::CDT_LedController:
-    case icue::CDT_MemoryModule:
-    case icue::CDT_Cooler:
-    case icue::CDT_Motherboard:
-    case icue::CDT_GraphicsCard:     return ClaLampArrayKindChassis;
-
-    default:                         return ClaLampArrayKindUndefined;
-    }
-}
-
-cla_u32 IcueSdkBackend::PositionUnitsForType(int corsairDeviceType)
-{
-    /*
-     * The SDK documents CorsairLedPosition::cx/cy as: "for keyboards, mice,
-     * mousemats, headset stands and memory modules values are in mm, for
-     * DIY-devices, headsets and coolers values are in logical units".
-     *
-     * Getting this wrong does not fail; it silently produces a bounding box
-     * off by orders of magnitude, and Windows then places effects on a device
-     * it believes is either microscopic or metres wide.
-     */
-    switch (corsairDeviceType)
-    {
-    case icue::CDT_Keyboard:
-    case icue::CDT_Mouse:
-    case icue::CDT_Mousemat:
-    case icue::CDT_HeadsetStand:
-    case icue::CDT_MemoryModule:
-        return ClaSourceUnitsMillimeters;
-    default:
-        return ClaSourceUnitsLogical;
     }
 }
 
@@ -514,8 +455,9 @@ BackendStatus IcueSdkBackend::EnumerateDevices(std::vector<BackendDeviceInfo> &d
         info.Id.assign(source.id, strnlen(source.id, icue::kStringSizeM));
         info.Model.assign(source.model, strnlen(source.model, icue::kStringSizeM));
         info.Serial.assign(source.serial, strnlen(source.serial, icue::kStringSizeM));
-        info.LampArrayKind = LampArrayKindForType(source.type);
-        info.PositionUnits = PositionUnitsForType(source.type);
+        info.LampArrayKind = icue::LampArrayKindForType(source.type);
+        info.PositionUnits = icue::PositionUnitsForType(source.type);
+        info.Scope = icue::SourceScopeForType(source.type);
         info.LedCount = (source.ledCount > 0) ? static_cast<cla_u32>(source.ledCount) : 0;
         info.ChannelCount = (source.channelCount > 0)
                                 ? static_cast<cla_u32>(source.channelCount) : 0;
@@ -551,8 +493,9 @@ BackendStatus IcueSdkBackend::GetDeviceInfo(const std::string &deviceId,
     info.Id.assign(raw.id, strnlen(raw.id, icue::kStringSizeM));
     info.Model.assign(raw.model, strnlen(raw.model, icue::kStringSizeM));
     info.Serial.assign(raw.serial, strnlen(raw.serial, icue::kStringSizeM));
-    info.LampArrayKind = LampArrayKindForType(raw.type);
-    info.PositionUnits = PositionUnitsForType(raw.type);
+    info.LampArrayKind = icue::LampArrayKindForType(raw.type);
+    info.PositionUnits = icue::PositionUnitsForType(raw.type);
+    info.Scope = icue::SourceScopeForType(raw.type);
     info.LedCount = (raw.ledCount > 0) ? static_cast<cla_u32>(raw.ledCount) : 0;
     info.ChannelCount = (raw.channelCount > 0) ? static_cast<cla_u32>(raw.channelCount) : 0;
     return BackendStatus::Ok;

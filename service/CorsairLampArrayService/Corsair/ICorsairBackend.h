@@ -56,6 +56,9 @@ struct BackendDeviceInfo
     /* Whether this device's LED coordinates are millimetres or logical units;
      * the iCUE SDK differs by device type. */
     cla_u32 PositionUnits = 0;
+    /* Whether the LEDs belong to one component or span the case
+     * (ClaSourceScope); sizes logical-unit devices. */
+    cla_u32 Scope = 0;
 
     cla_u32 LedCount = 0;
     cla_u32 ChannelCount = 0;

@@ -31,7 +31,8 @@ struct Mapped
 
 Mapped Map(const std::vector<ClaSourceLed> &leds, cla_u32 kind,
            ClaSourceUnits units = ClaSourceUnitsMillimeters,
-           const ClaMappingOptions *options = nullptr)
+           const ClaMappingOptions *options = nullptr,
+           cla_u32 scope = ClaSourceScopeComponent)
 {
     Mapped mapped;
     mapped.Lamps.resize(leds.empty() ? 1 : leds.size());
@@ -40,6 +41,7 @@ Mapped Map(const std::vector<ClaSourceLed> &leds, cla_u32 kind,
     ClaSourceDevice device{};
     device.LampArrayKind = kind;
     device.Units = units;
+    device.Scope = scope;
     device.LedCount = static_cast<cla_u32>(leds.size());
     device.Leds = leds.data();
 
@@ -279,6 +281,127 @@ CLA_TEST(Mapping_LogicalScalingPreservesAspectRatio)
 }
 
 /* ---------------------------------------------------------------- */
+/* Whole-case controllers                                            */
+/* ---------------------------------------------------------------- */
+
+/* Four fans in a column, in logical units: the shape a Commander or Lighting
+ * Node reports for front-mounted fans. */
+namespace {
+
+std::vector<ClaSourceLed> MakeFanColumn()
+{
+    std::vector<ClaSourceLed> leds;
+    for (int fan = 0; fan < 4; ++fan)
+    {
+        leds.push_back({static_cast<cla_u32>(fan), 0.5, fan * 1.0});
+        leds.push_back({static_cast<cla_u32>(fan + 10), 1.5, fan * 1.0 + 0.5});
+    }
+    return leds;
+}
+
+} // namespace
+
+/* The bug this guards: a controller driving every fan in the case was scaled
+ * onto one 120mm fan, so Windows believed the whole case was 12cm tall. */
+CLA_TEST(Mapping_WholeCaseControllerGetsCaseSizedEnvelope)
+{
+    const Mapped mapped = Map(MakeFanColumn(), ClaLampArrayKindChassis,
+                              ClaSourceUnitsLogical, nullptr, ClaSourceScopeWholeCase);
+    CLA_CHECK_EQ(static_cast<int>(mapped.Status), static_cast<int>(ClaStatusOk));
+
+    cla_u32 caseW = 0, caseH = 0, caseD = 0;
+    ClaNominalSize(ClaLampArrayKindChassis, ClaSourceScopeWholeCase, &caseW, &caseH, &caseD);
+
+    /* The fan column is taller than wide, so its height takes the larger
+     * case dimension. */
+    CLA_CHECK_EQ(mapped.Result.Attributes.BoundingBoxHeightInMicrometers,
+                 std::max(caseW, caseH));
+    CLA_CHECK_EQ(mapped.Result.Attributes.BoundingBoxDepthInMicrometers, caseD);
+    CLA_CHECK_EQ(mapped.Result.Attributes.LampArrayKind,
+                 static_cast<cla_u32>(ClaLampArrayKindChassis));
+}
+
+CLA_TEST(Mapping_WholeCaseEnvelopeIsLargerThanOneComponent)
+{
+    const Mapped component = Map(MakeFanColumn(), ClaLampArrayKindChassis,
+                                 ClaSourceUnitsLogical);
+    const Mapped wholeCase = Map(MakeFanColumn(), ClaLampArrayKindChassis,
+                                 ClaSourceUnitsLogical, nullptr, ClaSourceScopeWholeCase);
+
+    /* Pin the real-world sizes: a mid-tower is roughly 0.47m tall, a fan
+     * 0.12m.  A regression to the fan envelope would fail here. */
+    CLA_CHECK_EQ(component.Result.Attributes.BoundingBoxHeightInMicrometers, 120000u);
+    CLA_CHECK_EQ(wholeCase.Result.Attributes.BoundingBoxHeightInMicrometers, 466000u);
+    CLA_CHECK_EQ(wholeCase.Result.Attributes.BoundingBoxDepthInMicrometers, 453000u);
+}
+
+/* Scope sizes the envelope only; the layout itself must be the same shape and
+ * in the same LampId order. */
+CLA_TEST(Mapping_WholeCaseKeepsLayoutAndOrder)
+{
+    const Mapped component = Map(MakeFanColumn(), ClaLampArrayKindChassis,
+                                 ClaSourceUnitsLogical);
+    const Mapped wholeCase = Map(MakeFanColumn(), ClaLampArrayKindChassis,
+                                 ClaSourceUnitsLogical, nullptr, ClaSourceScopeWholeCase);
+
+    CLA_CHECK_EQ(component.Result.LampCount, wholeCase.Result.LampCount);
+    for (cla_u32 i = 0; i < component.Result.LampCount; ++i)
+    {
+        CLA_CHECK_EQ(component.LampIdToLedId[i], wholeCase.LampIdToLedId[i]);
+    }
+
+    const auto &a = wholeCase.Result.Attributes;
+    const double ratio = static_cast<double>(a.BoundingBoxHeightInMicrometers) /
+                         static_cast<double>(a.BoundingBoxWidthInMicrometers);
+    /* Source span is 1.0 wide by 3.5 tall. */
+    CLA_CHECK(ratio > 3.49 && ratio < 3.51);
+}
+
+/* Millimetre positions are already physical; scope must not rescale them. */
+CLA_TEST(Mapping_WholeCaseDoesNotRescaleMillimetres)
+{
+    const std::vector<ClaSourceLed> leds = {
+        {1, 0.0, 0.0},
+        {2, 100.0, 0.0},
+    };
+    const Mapped mapped = Map(leds, ClaLampArrayKindChassis, ClaSourceUnitsMillimeters,
+                              nullptr, ClaSourceScopeWholeCase);
+    CLA_CHECK_EQ(mapped.Result.Attributes.BoundingBoxWidthInMicrometers, 100000u);
+}
+
+/* Whole-case only means something for Chassis.  A keyboard is a keyboard. */
+CLA_TEST(Mapping_ScopeOnlyAffectsChassis)
+{
+    for (cla_u32 kind : {ClaLampArrayKindKeyboard, ClaLampArrayKindMouse,
+                         ClaLampArrayKindPeripheral, ClaLampArrayKindWearable,
+                         ClaLampArrayKindUndefined})
+    {
+        cla_u32 w1 = 0, h1 = 0, d1 = 0, w2 = 0, h2 = 0, d2 = 0;
+        ClaNominalSize(kind, ClaSourceScopeComponent, &w1, &h1, &d1);
+        ClaNominalSize(kind, ClaSourceScopeWholeCase, &w2, &h2, &d2);
+        CLA_CHECK_EQ(w1, w2);
+        CLA_CHECK_EQ(h1, h2);
+        CLA_CHECK_EQ(d1, d2);
+    }
+}
+
+/* ClaNominalSizeForKind is the component envelope, and a value outside the
+ * enum falls back to it rather than to anything larger. */
+CLA_TEST(Mapping_NominalSizeDefaultsToComponent)
+{
+    cla_u32 w1 = 0, h1 = 0, d1 = 0, w2 = 0, h2 = 0, d2 = 0, w3 = 0, h3 = 0, d3 = 0;
+    ClaNominalSizeForKind(ClaLampArrayKindChassis, &w1, &h1, &d1);
+    ClaNominalSize(ClaLampArrayKindChassis, ClaSourceScopeComponent, &w2, &h2, &d2);
+    ClaNominalSize(ClaLampArrayKindChassis, 0xFFFFFFFFu, &w3, &h3, &d3);
+    CLA_CHECK_EQ(w1, w2);
+    CLA_CHECK_EQ(h1, h2);
+    CLA_CHECK_EQ(d1, d2);
+    CLA_CHECK_EQ(w3, w2);
+    CLA_CHECK_EQ(h3, h2);
+    CLA_CHECK_EQ(d3, d2);
+}
+
+/* ---------------------------------------------------------------- */
 /* Degenerate topologies                                             */
 /* ---------------------------------------------------------------- */
 
@@ -456,36 +579,40 @@ CLA_TEST(Mapping_OutputPassesDriverSideValidation)
     {
         for (ClaSourceUnits units : {ClaSourceUnitsMillimeters, ClaSourceUnitsLogical})
         {
-            const auto leds = MakeKeyboardGrid(5, 9);
-            const Mapped mapped = Map(leds, kind, units);
-            CLA_CHECK_EQ(static_cast<int>(mapped.Status), static_cast<int>(ClaStatusOk));
-
-            /* Assemble the create request the service would send. */
-            const cla_u32 lampCount = mapped.Result.LampCount;
-            const cla_u32 size = ClaCreateRequestSizeForLampCount(lampCount);
-            std::vector<cla_u8> buffer(size, 0);
-            auto *request = reinterpret_cast<ClaLampArrayCreateRequest *>(buffer.data());
-            request->Header.Version = CLA_IPC_PROTOCOL_VERSION;
-            request->Header.Size = size;
-            request->LampCount = lampCount;
-            request->BoundingBoxWidthInMicrometers =
-                mapped.Result.Attributes.BoundingBoxWidthInMicrometers;
-            request->BoundingBoxHeightInMicrometers =
-                mapped.Result.Attributes.BoundingBoxHeightInMicrometers;
-            request->BoundingBoxDepthInMicrometers =
-                mapped.Result.Attributes.BoundingBoxDepthInMicrometers;
-            request->LampArrayKind = mapped.Result.Attributes.LampArrayKind;
-            request->MinUpdateIntervalInMicroseconds =
-                mapped.Result.Attributes.MinUpdateIntervalInMicroseconds;
-            request->DeviceName[0] = 0;
-            request->SerialNumber[0] = 0;
-            for (cla_u32 i = 0; i < lampCount; ++i)
+            for (cla_u32 scope : {static_cast<cla_u32>(ClaSourceScopeComponent),
+                                  static_cast<cla_u32>(ClaSourceScopeWholeCase)})
             {
-                request->Lamps[i] = mapped.Lamps[i];
-            }
+                const auto leds = MakeKeyboardGrid(5, 9);
+                const Mapped mapped = Map(leds, kind, units, nullptr, scope);
+                CLA_CHECK_EQ(static_cast<int>(mapped.Status), static_cast<int>(ClaStatusOk));
 
-            CLA_CHECK_EQ(static_cast<int>(ClaValidateCreateRequest(buffer.data(), size)),
-                         static_cast<int>(ClaStatusOk));
+                /* Assemble the create request the service would send. */
+                const cla_u32 lampCount = mapped.Result.LampCount;
+                const cla_u32 size = ClaCreateRequestSizeForLampCount(lampCount);
+                std::vector<cla_u8> buffer(size, 0);
+                auto *request = reinterpret_cast<ClaLampArrayCreateRequest *>(buffer.data());
+                request->Header.Version = CLA_IPC_PROTOCOL_VERSION;
+                request->Header.Size = size;
+                request->LampCount = lampCount;
+                request->BoundingBoxWidthInMicrometers =
+                    mapped.Result.Attributes.BoundingBoxWidthInMicrometers;
+                request->BoundingBoxHeightInMicrometers =
+                    mapped.Result.Attributes.BoundingBoxHeightInMicrometers;
+                request->BoundingBoxDepthInMicrometers =
+                    mapped.Result.Attributes.BoundingBoxDepthInMicrometers;
+                request->LampArrayKind = mapped.Result.Attributes.LampArrayKind;
+                request->MinUpdateIntervalInMicroseconds =
+                    mapped.Result.Attributes.MinUpdateIntervalInMicroseconds;
+                request->DeviceName[0] = 0;
+                request->SerialNumber[0] = 0;
+                for (cla_u32 i = 0; i < lampCount; ++i)
+                {
+                    request->Lamps[i] = mapped.Lamps[i];
+                }
+
+                CLA_CHECK_EQ(static_cast<int>(ClaValidateCreateRequest(buffer.data(), size)),
+                             static_cast<int>(ClaStatusOk));
+            }
         }
     }
 }
