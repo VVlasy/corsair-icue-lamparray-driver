@@ -120,6 +120,9 @@
 
   <ItemGroup>
     <Inf Include="CorsairLampArray.inf" />
+    <!-- The WDK packages INFs automatically but not the binary they install;
+         without this, Inf2Cat finds no .sys in the package (error 22.9.1). -->
+    <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
