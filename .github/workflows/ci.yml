@@ -106,17 +106,15 @@ jobs:
 
       # The hosted runner has no WDK.  Restore it as pinned NuGet packages
       # (driver/packages.config); driver/Directory.Build.props points the
-      # project at them.  Still best-effort while the first real driver
-      # build is being brought up.
+      # project at them.  This builds the real driver: compile under /W4 /WX,
+      # Code Analysis with the WDK driver rules (its warnings are errors
+      # too, since they flag things like IRQL violations), link, ApiValidator,
+      # InfVerif and catalog generation.
       - name: Restore the WDK
-        id: wdk
-        continue-on-error: true
         run: nuget restore driver\packages.config -PackagesDirectory driver\packages
 
       - name: Build the driver
-        if: steps.wdk.outcome == 'success'
-        continue-on-error: true
         run: |
           msbuild driver\CorsairLampArray\CorsairLampArray.vcxproj `
             /p:Configuration=Release /p:Platform=x64 `
-            /p:SignMode=Off
+            /p:SignMode=Off /p:CodeAnalysisTreatWarningsAsErrors=true

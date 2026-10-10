@@ -87,6 +87,17 @@ msbuild driver\CorsairLampArray\CorsairLampArray.vcxproj ^
 
 Output lands in `build\driver\x64\Debug\`.
 
+Without an installed WDK, restore the pinned NuGet WDK first (this is what CI
+does); `driver\Directory.Build.props` picks it up automatically, and ignores it
+when it has not been restored:
+
+```
+nuget restore driver\packages.config -PackagesDirectory driver\packages
+```
+
+Build with the 64-bit MSBuild: the NuGet WDK ships InfVerif for x64 and ARM64
+only, so the 32-bit MSBuild fails the InfVerif step.
+
 The project has Code Analysis and PREfast on, and warnings as errors. This is
 kernel code parsing untrusted input; the extra build time is worth it.
 

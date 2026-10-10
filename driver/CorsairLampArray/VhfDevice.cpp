@@ -80,6 +80,24 @@ ClaFindLampArrayLocked(
     return NULL;
 }
 
+/*
+ * Stop in-flight callbacks from publishing anything further.
+ *
+ * Kept out of the PAGE section on purpose: acquiring a spin lock raises to
+ * DISPATCH_LEVEL, and pageable code must not run there (a page fault at
+ * DISPATCH_LEVEL is a bugcheck).  ClaLampArrayDestroy is pageable, so this
+ * part of it lives in non-paged code.
+ */
+_IRQL_requires_max_(DISPATCH_LEVEL)
+static VOID
+ClaMarkLampArrayRemoving(_In_ PCLA_LAMP_ARRAY_CONTEXT LampArray)
+{
+    WdfSpinLockAcquire(LampArray->StateLock);
+    LampArray->Removing = TRUE;
+    LampArray->PendingFrameValid = FALSE;
+    WdfSpinLockRelease(LampArray->StateLock);
+}
+
 static VOID
 ClaFreeLampArray(_In_ PCLA_LAMP_ARRAY_CONTEXT LampArray)
 {
@@ -346,11 +364,7 @@ ClaLampArrayDestroy(
         return STATUS_NOT_FOUND;
     }
 
-    /* Stop in-flight callbacks from publishing anything further. */
-    WdfSpinLockAcquire(lampArray->StateLock);
-    lampArray->Removing = TRUE;
-    lampArray->PendingFrameValid = FALSE;
-    WdfSpinLockRelease(lampArray->StateLock);
+    ClaMarkLampArrayRemoving(lampArray);
 
     if (lampArray->VhfHandle != NULL)
     {

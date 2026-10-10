@@ -126,11 +126,11 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-The driver needs Visual Studio 2022 and the WDK to build for real -- but its
-sources are also compiled and linked against stub WDK headers as part of the
-normal test run, so typos, signature mismatches and duplicate symbols are
-caught on any machine rather than waiting for someone with a WDK. That check
-found two errors that would have failed the first real build. See
+The driver needs Visual Studio and the WDK to build for real. CI does that on
+every push, against a pinned NuGet WDK, with warnings and Code Analysis
+findings as errors. Its sources are also compiled and linked against stub WDK
+headers as part of the normal test run, so typos, signature mismatches and
+duplicate symbols are caught on any machine, without a WDK. See
 [docs/development.md](docs/development.md).
 
 ## Diagnosing problems
@@ -174,7 +174,7 @@ Implemented and **verified by automated tests** on every push:
 
 Implemented but **not yet run on real hardware**:
 
-- the kernel driver (needs a WDK build and a Windows machine)
+- the kernel driver (it builds in CI, but has not been loaded on a machine)
 - the iCUE SDK backend against real iCUE
 - the Windows service host and driver link
 - end-to-end colour changes reaching physical Corsair hardware
